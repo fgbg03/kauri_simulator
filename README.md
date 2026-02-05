@@ -1,5 +1,5 @@
 # kauri_simulator
-Simulator for the Kauri BFT protocol extended for dynamic adaptation.
+Simulator for the Kauri BFT consensus protocol extended for dynamic adaptation.
 
 # Files
 
@@ -19,4 +19,4 @@ Simulator for the Kauri BFT protocol extended for dynamic adaptation.
 
 **tree_generator** - generates trees from a collection of nodes
 
-**tree** - Kauri tree
+**tree** - Kauri tree representation
