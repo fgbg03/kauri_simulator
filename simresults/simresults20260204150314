@@ -1,0 +1,477 @@
+{
+  "params": {
+    "exit_cond": "    exit_condition = lambda n: until_epoch(4, n)\n",
+    "N": 6,
+    "fanout": 3,
+    "expected_rtt": 400,
+    "decisions_per_tree": 1,
+    "faulty_link_penalty": 0.6,
+    "suspected_leader_penalty": 0.6,
+    "block_endorser_compensation": 1.1,
+    "bins_to_use": 2,
+    "epoch_size": 3,
+    "scale_function": "    scale_function = lambda x: 1/(x+1)\n",
+    "bootstrap1": [
+      "Tree<3,(Node<0>, Node<1>, Node<2>, Node<3>, Node<4>, Node<5>)>",
+      "Tree<3,(Node<1>, Node<0>, Node<2>, Node<3>, Node<4>, Node<5>)>"
+    ],
+    "bootstrap2": [
+      "Tree<3,(Node<2>, Node<3>, Node<0>, Node<1>, Node<4>, Node<5>)>",
+      "Tree<3,(Node<3>, Node<2>, Node<0>, Node<1>, Node<4>, Node<5>)>"
+    ],
+    "ideal_latency": 110,
+    "latency": [
+      [
+        0,
+        500,
+        500,
+        500,
+        500,
+        500
+      ],
+      [
+        500,
+        0,
+        100,
+        100,
+        100,
+        100
+      ],
+      [
+        500,
+        100,
+        0,
+        100,
+        100,
+        100
+      ],
+      [
+        500,
+        100,
+        100,
+        0,
+        100,
+        100
+      ],
+      [
+        500,
+        100,
+        100,
+        100,
+        0,
+        100
+      ],
+      [
+        500,
+        100,
+        100,
+        100,
+        100,
+        0
+      ]
+    ]
+  },
+  "0": {
+    "schedule": [
+      "Tree<3,(Node<0>, Node<1>, Node<2>, Node<3>, Node<4>, Node<5>)>",
+      "Tree<3,(Node<1>, Node<0>, Node<2>, Node<3>, Node<4>, Node<5>)>"
+    ],
+    "scores": null,
+    "reputations": [
+      0.2376,
+      0.396,
+      0.7260000000000001,
+      0.7260000000000001,
+      0.66,
+      0.66
+    ],
+    "execution": {
+      "size": 2,
+      "0": {
+        "tree": "Tree<3,(Node<0>, Node<1>, Node<2>, Node<3>, Node<4>, Node<5>)>",
+        "start": 0,
+        "target": 1,
+        "suspected": true,
+        "instance_votes": []
+      },
+      "1": {
+        "tree": "Tree<3,(Node<1>, Node<0>, Node<2>, Node<3>, Node<4>, Node<5>)>",
+        "start": 0,
+        "target": 1,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 1,
+              "time": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "1": {
+    "schedule": [
+      "Tree<3,(Node<2>, Node<3>, Node<0>, Node<1>, Node<4>, Node<5>)>",
+      "Tree<3,(Node<3>, Node<2>, Node<0>, Node<1>, Node<4>, Node<5>)>"
+    ],
+    "scores": null,
+    "reputations": [
+      0.08553599999999999,
+      0.4791600000000001,
+      0.4791600000000001,
+      0.4791600000000001,
+      0.7986000000000002,
+      0.7986000000000002
+    ],
+    "execution": {
+      "size": 2,
+      "0": {
+        "tree": "Tree<3,(Node<2>, Node<3>, Node<0>, Node<1>, Node<4>, Node<5>)>",
+        "start": 1,
+        "target": 2,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 5,
+              "time": 400
+            },
+            {
+              "id": 4,
+              "time": 400
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 1,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 0
+            }
+          ]
+        ]
+      },
+      "1": {
+        "tree": "Tree<3,(Node<3>, Node<2>, Node<0>, Node<1>, Node<4>, Node<5>)>",
+        "start": 2,
+        "target": 3,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 5,
+              "time": 400
+            },
+            {
+              "id": 4,
+              "time": 400
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 1,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "2": {
+    "schedule": [
+      "Tree<3,(Node<4>, Node<5>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+      "Tree<3,(Node<5>, Node<4>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+      "Tree<3,(Node<2>, Node<3>, Node<5>, Node<4>, Node<1>, Node<0>)>"
+    ],
+    "scores": {
+      "min": 0.40499999999999997,
+      "average": 0.6083333333333333,
+      "median": 0.71,
+      "avg-sd": 0.4645549544920683,
+      "inliers_average": 0.6083333333333333,
+      "inliers_median": 0.71,
+      "inliers_avg-sd": 0.4645549544920683,
+      "bad_outliers_average": 0.6083333333333333,
+      "bad_outliers_median": 0.71,
+      "bad_outliers_avg-sd": 0.4645549544920683
+    },
+    "reputations": [
+      0.018475775999999992,
+      0.6377619600000003,
+      0.6377619600000003,
+      0.3478701600000001,
+      0.5797836000000002,
+      0.5797836000000002
+    ],
+    "execution": {
+      "size": 3,
+      "0": {
+        "tree": "Tree<3,(Node<4>, Node<5>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+        "start": 3,
+        "target": 4,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 5,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 4,
+              "time": 0
+            }
+          ]
+        ]
+      },
+      "1": {
+        "tree": "Tree<3,(Node<5>, Node<4>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+        "start": 4,
+        "target": 5,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 4,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 5,
+              "time": 0
+            }
+          ]
+        ]
+      },
+      "2": {
+        "tree": "Tree<3,(Node<2>, Node<3>, Node<5>, Node<4>, Node<1>, Node<0>)>",
+        "start": 5,
+        "target": 6,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 5,
+              "time": 200
+            },
+            {
+              "id": 4,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "3": {
+    "schedule": [
+      "Tree<3,(Node<3>, Node<2>, Node<5>, Node<4>, Node<1>, Node<0>)>",
+      "Tree<3,(Node<4>, Node<5>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+      "Tree<3,(Node<5>, Node<4>, Node<3>, Node<2>, Node<1>, Node<0>)>"
+    ],
+    "scores": {
+      "min": 0.40499999999999997,
+      "average": 0.44,
+      "median": 0.40499999999999997,
+      "avg-sd": 0.39050252531694185,
+      "inliers_average": 0.43999999999999995,
+      "inliers_median": 0.40499999999999997,
+      "inliers_avg-sd": 0.3905025253169415,
+      "bad_outliers_average": 0.43999999999999995,
+      "bad_outliers_median": 0.40499999999999997,
+      "bad_outliers_avg-sd": 0.3905025253169415
+    },
+    "reputations": [
+      0.0039907676159999985,
+      0.8488611687600006,
+      0.4630151829600002,
+      0.4630151829600002,
+      0.4209228936000002,
+      0.4209228936000002
+    ],
+    "execution": {
+      "size": 3,
+      "0": {
+        "tree": "Tree<3,(Node<3>, Node<2>, Node<5>, Node<4>, Node<1>, Node<0>)>",
+        "start": 6,
+        "target": 7,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 5,
+              "time": 200
+            },
+            {
+              "id": 4,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 0
+            }
+          ]
+        ]
+      },
+      "1": {
+        "tree": "Tree<3,(Node<4>, Node<5>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+        "start": 7,
+        "target": 8,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 5,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 4,
+              "time": 0
+            }
+          ]
+        ]
+      },
+      "2": {
+        "tree": "Tree<3,(Node<5>, Node<4>, Node<3>, Node<2>, Node<1>, Node<0>)>",
+        "start": 8,
+        "target": 9,
+        "suspected": false,
+        "instance_votes": [
+          [
+            {
+              "id": 1,
+              "time": 400
+            },
+            {
+              "id": 4,
+              "time": 200
+            },
+            {
+              "id": 3,
+              "time": 200
+            },
+            {
+              "id": 2,
+              "time": 200
+            },
+            {
+              "id": 5,
+              "time": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "4": {
+    "schedule": [
+      "Tree<3,(Node<1>, Node<2>, Node<5>, Node<4>, Node<3>, Node<0>)>",
+      "Tree<3,(Node<2>, Node<1>, Node<5>, Node<4>, Node<3>, Node<0>)>",
+      "Tree<3,(Node<4>, Node<5>, Node<2>, Node<1>, Node<3>, Node<0>)>"
+    ],
+    "scores": {
+      "min": 0.305,
+      "average": 0.575,
+      "median": 0.71,
+      "avg-sd": 0.384081169079632,
+      "inliers_average": 0.575,
+      "inliers_median": 0.71,
+      "inliers_avg-sd": 0.384081169079632,
+      "bad_outliers_average": 0.575,
+      "bad_outliers_median": 0.71,
+      "bad_outliers_avg-sd": 0.384081169079632
+    }
+  },
+  "5": {
+    "schedule": [
+      "Tree<3,(Node<3>, Node<1>, Node<2>, Node<5>, Node<4>, Node<0>)>",
+      "Tree<3,(Node<5>, Node<2>, Node<1>, Node<3>, Node<4>, Node<0>)>",
+      "Tree<3,(Node<1>, Node<3>, Node<2>, Node<5>, Node<4>, Node<0>)>"
+    ],
+    "scores": {
+      "min": 0.40499999999999997,
+      "average": 0.5083333333333334,
+      "median": 0.51,
+      "avg-sd": 0.42463413647006937,
+      "inliers_average": 0.5083333333333333,
+      "inliers_median": 0.51,
+      "inliers_avg-sd": 0.4246341364700686,
+      "bad_outliers_average": 0.5083333333333333,
+      "bad_outliers_median": 0.51,
+      "bad_outliers_avg-sd": 0.4246341364700686
+    }
+  }
+}
