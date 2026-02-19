@@ -53,13 +53,20 @@ class Kauri:
             child = n
             parent = tree.parent(n)
             time = 0
+            # time from node to root
             while parent != None:
+                # check parent wants do receive child's vote and child want to pass vote to parent
+                if parent.is_byzantine(child, tree) or child.is_byzantine(parent, tree):
+                    time = -1
+                    break
                 time += latency_matrix[child.id][parent.id]
                 child = parent
                 parent = tree.parent(parent)
 
-            time *= 2
-            votes.append({"id": n.id, "time": time})
+            # add vote if aggregated
+            if time >= 0:
+                time *= 2
+                votes.append({"id": n.id, "time": time})
 
             nodes += tree.children(n)
 
@@ -81,6 +88,8 @@ class Kauri:
         # collect votes before second timeout to reach quorum
         quroum_size = (tree.size()-1) // 3 * 2 + 1
         while len(collected) < quroum_size:
+            if len(votes) == 0:
+                break
             v = votes.pop()
             if v["time"] <= self.hard_timeout:
                 collected.append(v)

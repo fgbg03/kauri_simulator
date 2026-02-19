@@ -20,8 +20,8 @@ class TreeGenerator:
         tree_pool = []
 
         for i, bin in enumerate(bins):
-            if i >= self.bins_to_use:
-                break
+            #if i >= self.bins_to_use:
+            #    break
 
             tree_nodes = [] + bin # current bin first (inner nodes), concat -> do not pass reference
             for j, b in enumerate(bins): # add remaining bins

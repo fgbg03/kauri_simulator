@@ -1,4 +1,4 @@
-from node import Node
+from node import Node, LeadershipSeizerNode, DisenfranchiserNode, IndirectDisenfranchiserNode
 from tree import Tree
 from consensus import Kauri
 from reputation import Reputation
@@ -14,28 +14,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, AutoMinorLocator
 import random
 
-N = 6 # N nodes
-m = 3 # m fanout
-nodes = [Node(i) for i in range(N)]
-ideal_latency = 110
-
-def select_latency(i,j):
-    if i == j:
-        return 0
-    if i == 0 or j == 0:
-        return 500
-    return 100
-latency_matrix = [[select_latency(i,j) for j in range(N)] for i in range(N)] #homogeneous network
-"""
-latency_matrix = \
-[[0,1,9,0,0,0,0],
- [1,0,0,10,10,0,0],
- [9,0,1,0,0,0,5],
- [0,10,0,0,0,0,0],
- [0,10,0,0,0,0,0],
- [0,0,1,0,0,0,0],
- [0,0,5,0,0,0,0]]
-"""
 def infinite(epoch):
     return False
 
@@ -45,6 +23,14 @@ def until_epoch(target, n):
 def simulation(
         bootstrap1: list[Tree], 
         bootstrap2: list[Tree],
+
+        N: int,
+        m: int,
+        nodes: list[Node],
+
+
+        latency_matrix: list[list[int]],
+        ideal_latency = 110,
 
         exit_condition = lambda n: until_epoch(100, n),
         expected_rtt = 400,
@@ -57,6 +43,7 @@ def simulation(
         bins_to_use = 2,
         epoch_size = 3,
         scale_function = lambda x: 1/(x+1),
+        memory_size = 12, # number of trees
 
         print_to_stdout = True,
         write_to_file = True
@@ -110,18 +97,26 @@ def simulation(
         for tree in tree_pool:
             scores.append(tree_evaluator.score(tree, latency_matrix))
 
-        """
-        for n in nodes:
-            print(f"{n}, rep = {n.get_reputation()}")
-        print()
-        for i in range(len(tree_pool)):
-            print(f"Tree {i}")
-            print(tree_pool[i])
-            print(scores[i])
-            print("---")
-        """
+        # print(f"\n\nEpoch {epoch}:\n")
+        # for n in nodes:
+        #     print(f"{n}, rep = {n.get_reputation()}")
+        # print()
+        # for i in range(len(tree_pool)):
+        #     print(f"Tree {i}")
+        #     print(tree_pool[i])
+        #     print(scores[i])
+        #     print("---")
 
-        mem = schedules[-1][-3:]
+        # build memory for chain quality & fairness
+        mem = [] # last memory_size trees
+        for sched in schedules[::-1]:
+            for tr in sched[::-1]:
+                mem.append(tr)
+                if len(mem) >= memory_size:
+                    break
+            if len(mem) >= memory_size:
+                    break
+
         unified_scores = [score["unified"] for score in scores]
         new_schedule, new_schedule_tree_scores = epoch_generator.generate_epoch(tree_pool, unified_scores, mem)
 
@@ -353,13 +348,46 @@ def categorical_points(y_values, labels, xlabel="Category", ylabel="Value", titl
     plt.tight_layout()
     plt.show()
 
+def select_latency(i,j, too_slow: list[int] = [], bad_pairs: list[tuple[int,int]] = []):
+    if i == j:
+        return 0
+    if i in too_slow or j in too_slow:
+        return 500
+    if (i,j) in bad_pairs or (j,i) in bad_pairs:
+        return 500
+    return 100
 
 if __name__ == "__main__":
+    N = 6 # N nodes
+    f = (N-1)//3
+    quorum_size = 2*f+1
+    m = 3 # m fanout
+    nodes = [Node(i) for i in range(N)]
+    nodes[0] = LeadershipSeizerNode(0)
+
+    latency_matrix = [[select_latency(i,j, too_slow=[]) for j in range(N)] for i in range(N)]
+
     t1 = Tree(nodes, m)
-    t2 = Tree(nodes[2:4]+nodes[:2]+nodes[4:], m)
+    inner = t1.size_inner_nodes()
+    t2 = Tree(nodes[inner:2*inner]+nodes[:inner]+nodes[2*inner:], m)
+    simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, compensation=1.04, scale_function=lambda x: 1 - 0.06*x)
+
+"""
+if __name__ == "__main__":
+    N = 12 # N nodes
+    f = (N-1)//3
+    quorum_size = 2*f+1
+    m = 3 # m fanout
+    nodes = [Node(i) for i in range(N)]
+
+    latency_matrix = [[select_latency(i,j, too_slow = [1,2,3]) for j in range(N)] for i in range(N)]
+
+    t1 = Tree(nodes, m)
+    inner = t1.size_inner_nodes()
+    t2 = Tree(nodes[inner:2*inner]+nodes[:inner]+nodes[2*inner:], m)
     #simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), faulty_link_penalty=0.73)
-    #"""
-    threshold = 0.5
+
+    threshold = 0.66
     above_threshold = 0
     k_p = 0.6
     k_c = 1.03
@@ -370,12 +398,13 @@ if __name__ == "__main__":
     while k_c < 1.20:
         k_p = 0.6
         above_threshold = 0
-        while above_threshold < N-2:
+        while above_threshold < N-f-1:
             above_threshold = 0
             nodes = [Node(i) for i in range(N)]
             t1 = Tree(nodes, m)
             t2 = Tree(nodes[2:4]+nodes[:2]+nodes[4:], m)
-            res = simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), write_to_file=False, print_to_stdout=False, faulty_link_penalty=k_p, compensation=k_c)
+            res = simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, 
+                             write_to_file=False, print_to_stdout=False, faulty_link_penalty=k_p, compensation=k_c)
             for rep in res[99]["reputations"]:
                 if rep >= threshold:
                     above_threshold += 1
@@ -387,13 +416,19 @@ if __name__ == "__main__":
 
         k_c += 0.005
     
-    # categorical_points(list_k_p, list_k_c, "Companesation rate", "Penalty rate (faulty link)", f"N-2 nodes with reputation above {threshold} after 100 epochs")
-    # boxplot_from_lists(list_reputations, list_k_c, "Reputations after 100 epochs", "Compensation rate", "Reputations", threshold)
-
+    categorical_points(list_k_p, list_k_c, "Companesation rate", "Penalty rate (faulty link)", f"N({N})-f({f})-1 nodes with reputation above {threshold} after 100 epochs")
+    boxplot_from_lists(list_reputations, list_k_c, f"Reputations after 100 epochs for N({N}) nodes", "Compensation rate", "Reputations", threshold)
+    
+    txt = f"Compensation and penalisation rates for {N} nodes and {threshold} threshold\n"
     for i in range(len(list_k_c)):
         c = float(list_k_c[i])
         p = list_k_p[i]
-        print(f"k_c = {c}, k_p = {p}, k_c^(f-N) = {c**-5}, ratio = {p/(c**-5)}")
+        new_line = f"k_c = {c}, k_p = {p}, k_c^(f-N) = {c**-5}, k_p^f = {p**f}, ratio k_p^f/k_c^(f-N) = {p**f/(c**(f-N))}"
+        print(new_line)
+        txt = f"{txt}{new_line}\n"
+
+    with open(f"simresults/log_penalty_compensation_threshold{int(threshold*100):03d}_{N}nodes.txt", "w") as text_file:
+        text_file.write(txt)
     #print(res[99]["reputations"])
     #print("k =",k_p)
-    #"""
+"""

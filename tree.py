@@ -15,6 +15,12 @@ class Tree:
                 break
             numInnerNodes += 1
         return numInnerNodes
+    
+    def get_reputations(self):
+        reps = {}
+        for n in self.nodes:
+            reps[n.id] = n.get_reputation()
+        return reps
 
     def node_at(self, idx):
         if idx >= len(self.nodes):
@@ -88,6 +94,9 @@ class Tree:
             level+=1
         return level+1
     
+    def get_inner_nodes(self):
+        return self.nodes[:self.size_inner_nodes()]
+
     def innerNodeRotations(self):
         trees = []
         numInnerNodes = self.size_inner_nodes()
