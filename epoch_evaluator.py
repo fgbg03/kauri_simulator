@@ -1,4 +1,5 @@
 from tree import Tree
+import numpy as np
 
 class EpochEvaluator:
     def __init__(self):
@@ -57,10 +58,8 @@ class EpochEvaluator:
     
     def evaluate_epoch_avg_minus_sd(self, scores):
         avg = self.evaluate_epoch_avg(scores)
-        sqd = self.evaluate_epoch_avg([s**2 for s in scores])
-
-        var = sqd-avg**2
-        sd = var**0.5
+        var = np.var(scores)
+        sd = var ** 0.5
 
         return avg - sd
 
