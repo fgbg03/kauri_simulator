@@ -9,12 +9,7 @@ class Tree:
         return len(self.nodes)
     
     def size_inner_nodes(self):
-        numInnerNodes = 0
-        for n in self.nodes:
-            if len(self.children(n)) == 0:
-                break
-            numInnerNodes += 1
-        return numInnerNodes
+        return (self.size() - 1 + self.fanout - 1) // self.fanout
     
     def get_reputations(self):
         reps = {}
