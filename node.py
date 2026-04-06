@@ -1,3 +1,5 @@
+import random as rd
+
 class Node:
     def __init__(self, id):
         self.id = id
@@ -89,3 +91,21 @@ class LeadershipSeizerNode(Node):
 
     def is_byzantine(self, target, tree):
         return self in tree.get_inner_nodes()
+    
+class QuietParticipationNode(Node):
+    def __init__(self, id):
+        super().__init__(id)
+
+    def is_byzantine(self, target, tree):
+        return True
+
+class RandomNode(Node):
+    def __init__(self, id, failure_prob=0.5):
+        super().__init__(id)
+        self.failure_prob = failure_prob
+    
+    def is_byzantine(self, target, tree):
+        return rd.random() < self.failure_prob
+    
+    def __repr__(self):
+        return f"{type(self).__name__}<{self.id}, {self.failure_prob}>"
