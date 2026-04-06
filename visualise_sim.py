@@ -165,7 +165,7 @@ def extract(data: dict) -> dict:
 
 SCORE_COLOURS = [
     "#eb182a", "#2a9d8f", "#e9c46a", "#457b9d",
-    "#f4a261", "#8ecae6", "#a8dadc", "#6d6875", "#7209b7", "#13AA13", "#B60155", "#FF98DD"
+    "#f4a261", "#8ecae6", "#a8dadc", "#6d6875", "#7209b7", "#13AA13", "#B60155", "#FF98DD", "#003CFF", "#4E96E7"
 ]
 NODE_COLOURS = [
     "#4cc9f0", "#f72585", "#7209b7", "#3a0ca3",
@@ -175,28 +175,28 @@ NODE_COLOURS = [
 
 # ── figure builders ───────────────────────────────────────────────────────────
 
-def fig_epoch_scores(d: dict) -> go.Figure:
+def fig_epoch_scores(d: dict, raw: dict, filename: str) -> go.Figure:
     """Line chart of all epoch-score alternatives over time."""
     fig = go.Figure()
-
+    epoch_size = raw["params"]["epoch_size"]
     eks = d["epochs"]
     n_suspected = [
-        sum(1 for c in cfgs if c["suspected"])
+        sum(1 for c in cfgs if c["suspected"])/epoch_size
         for cfgs in d["config_data"]
     ]
     fig.add_trace(go.Bar(
         x=eks, y=n_suspected,
         marker_color="#3b3b3b",
-        name="Suspected configs",
+        name="Suspected configs (%)",
     ))
     n_byz_leaders = [
-        sum(1 for c in cfgs if c["byzantine_leader"])
+        sum(1 for c in cfgs if c["byzantine_leader"])/epoch_size
         for cfgs in d["config_data"]
     ]
     fig.add_trace(go.Bar(
         x=eks, y=n_byz_leaders,
         marker_color="#3e3f00",
-        name="Byzantine leaders",
+        name="Byzantine leaders (%)",
     ))
 
     j = 0
@@ -232,9 +232,29 @@ def fig_epoch_scores(d: dict) -> go.Figure:
         marker=dict(size=5),
         connectgaps=False,
     ))
+    j+=1
+    vals = d["mean_faulty_reps"]
+    fig.add_trace(go.Scatter(
+        x=eks, y=vals,
+        mode="lines+markers",
+        name="mean_faulty_reps",
+        line=dict(color=SCORE_COLOURS[j % len(SCORE_COLOURS)], width=2),
+        marker=dict(size=5),
+        connectgaps=False,
+    ))
+    j+=1
+    vals = d["mean_honest_reps"]
+    fig.add_trace(go.Scatter(
+        x=eks, y=vals,
+        mode="lines+markers",
+        name="mean_honest_reps",
+        line=dict(color=SCORE_COLOURS[j % len(SCORE_COLOURS)], width=2),
+        marker=dict(size=5),
+        connectgaps=False,
+    ))
 
     fig.update_layout(
-        title="Epoch Score Alternatives Over Time",
+        title=f"Epoch Score Alternatives Over Time for {filename}",
         xaxis_title="Epoch",
         yaxis_title="Score",
         legend_title="Formula",
@@ -391,13 +411,16 @@ def main():
     data = load(path)
     d = extract(data)
 
+    slash = path.rfind("/")
+    filename = path if slash == -1 else path[slash+1:]
+
     print(f"Loaded {len(d['epochs'])} epochs, {d['n_nodes']} nodes, "
           f"{len(d['score_keys'])} score alternatives: {d['score_keys']}")
 
     figs = [
-        ("epoch_scores",           fig_epoch_scores(d)),
+        ("epoch_scores",           fig_epoch_scores(d, data, filename)),
 #        ("reputation_heatmap",     fig_reputation_heatmap(d)),
-        ("scores_vs_reputations",  fig_scores_vs_reputations(d)),
+#        ("scores_vs_reputations",  fig_scores_vs_reputations(d)),
 #        ("suspected_configs",      fig_suspected_configs(d)),
     ]
 
