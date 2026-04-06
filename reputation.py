@@ -17,6 +17,13 @@ class Reputation:
     def penalty_suspected_leader(self, node: Node):
         node.set_reputation(self.k_sl * node.get_reputation())
 
+    def penalty_suspected_inner_nodes(self, nodes_by_level: list[list[Node]], m):
+        for level, nodes_in_level in enumerate(nodes_by_level):
+            factor = self.k_sl ** (1/len(nodes_in_level))
+            for node in nodes_in_level:
+                node.set_reputation(factor * node.get_reputation())
+
+
     def compensation_block_endorser(self, node: Node):
         node.set_reputation(self.k_be * node.get_reputation())
 
@@ -26,12 +33,13 @@ class Reputation:
             self.parse_config(config_data)
     
     def parse_config(self, config_data):
-        tree = config_data["tree"]
+        tree: Tree = config_data["tree"]
         suspected = config_data["suspected"]
         instance_votes = config_data["instance_votes"]
 
         if suspected:
-            self.penalty_suspected_leader(tree.root())
+            #self.penalty_suspected_leader(tree.root())
+            self.penalty_suspected_inner_nodes(tree.get_inner_nodes_by_level(), tree.fanout)
 
         for instance in instance_votes:
             self.parse_instance(tree, instance)

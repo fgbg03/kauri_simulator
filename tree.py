@@ -91,6 +91,19 @@ class Tree:
     
     def get_inner_nodes(self):
         return self.nodes[:self.size_inner_nodes()]
+    
+    def get_inner_nodes_by_level(self):
+        by_level = []
+        inner = self.get_inner_nodes()
+        level = 0
+        begin = 0
+        end = 0
+        m = self.fanout
+        while begin < len(inner):
+            end = begin + m**level
+            by_level.append(inner[begin:end])
+            begin = end
+        return by_level
 
     def innerNodeRotations(self):
         trees = []
