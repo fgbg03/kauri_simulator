@@ -26,12 +26,13 @@ class Tree:
         return self.nodes[idx]
     
     def get_node(self, id):
-        if id > len(self.positions):
+        if id >= len(self.positions):
             return None
-        self.node_at(self.positions[id])
+        pos = self.positions[id]
+        return self.node_at(pos)
 
     def index(self, node):
-        if node.id > len(self.positions):
+        if node.id >= len(self.positions):
             return None
         return self.positions[node.id]
 
@@ -51,30 +52,20 @@ class Tree:
         return self.nodes[parentIdx]
     
     def children(self, node):
-        if node not in self.nodes:
+        if node.id >= len(self.nodes):
             return None
         
         children = []
         idx = self.index(node)
+        m = self.fanout
 
-        idxLevelStart = 0
-        idxChildLevelStart = 0
-        level = 0
-        while True:
-            idxLevelStart = idxChildLevelStart
-            idxChildLevelStart += self.fanout**level
-
-            if idx < idxChildLevelStart:
+        chldrn_start = m*idx+1
+        for i in range(m):
+            chld_pos = chldrn_start + i
+            c = self.node_at(chld_pos)
+            if c is None:
                 break
-
-            level+=1
-        idxInLevel = idx - idxLevelStart
-
-        for i in range(self.fanout):
-            childIdx = idxChildLevelStart + idxInLevel*self.fanout + i
-            if childIdx >= len(self.nodes):
-                break
-            children.append(self.node_at(childIdx))
+            children.append(c)
 
         return children
     
