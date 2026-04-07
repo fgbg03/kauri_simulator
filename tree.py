@@ -4,6 +4,9 @@ class Tree:
     def __init__(self, nodes, m: int):
         self.nodes = tuple(nodes)
         self.fanout = m
+        self.positions = [0]*len(nodes)
+        for i, n in enumerate(self.nodes):
+            self.positions[n.id] = i
     
     def size(self):
         return len(self.nodes)
@@ -23,13 +26,14 @@ class Tree:
         return self.nodes[idx]
     
     def get_node(self, id):
-        for n in self.nodes:
-            if n.id == id:
-                return n
-        return None
+        if id > len(self.positions):
+            return None
+        self.node_at(self.positions[id])
 
     def index(self, node):
-        return self.nodes.index(node)
+        if node.id > len(self.positions):
+            return None
+        return self.positions[node.id]
 
     def root(self):
         return self.node_at(0)
@@ -103,6 +107,7 @@ class Tree:
             end = begin + m**level
             by_level.append(inner[begin:end])
             begin = end
+            level += 1
         return by_level
 
     def innerNodeRotations(self):
@@ -170,3 +175,9 @@ class Tree:
                 last = x + len(str(val))
             print(line.rstrip())
 
+if __name__ == "__main__":
+    print("Testing tree")
+    t = Tree([Node(i) for i in range(100)], 10)
+    print(f"Inner nodes: {t.get_inner_nodes()}")
+    print()
+    print(f"Inner nodes by level: {t.get_inner_nodes_by_level()}")
