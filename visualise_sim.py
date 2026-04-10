@@ -35,7 +35,7 @@ def config_summary(cfg: dict, base_reputations, byz_idxs, num_inner_nodes) -> di
     """Extract per-config features."""
     # how many byzantines in the inner nodes of the config (real/perceived)
     tree = cfg["tree"]
-    node_idxs = [int(i) for i in re.findall(r'<([a-zA-Z0-9]*)>', tree)]
+    node_idxs = [int(i) for i in re.findall(r'<(\d+)[,>]', tree)][1:] # ignore frist, it's the fanout of the tree
     inner_idxs = node_idxs[:num_inner_nodes]
     real_byz_ratio = 0
     perceived_byz_ratio = 0
@@ -87,12 +87,13 @@ def extract(data: dict) -> dict:
     nodes = all_matches[1:]  # skip the Tree class
     count = dict(Counter(nodes))
     n_honest = count.pop("Node")
-    idxs = [int(i) for i in re.findall(r'<([a-zA-Z0-9]*)>', tree1)]
+    idxs = [int(i) for i in re.findall(r'<(\d+)[,>]', tree1)][1:] # first will be fanout of the tree, ignore that to get indices
     n_faulty = n_nodes - n_honest
     byz_idxs = []
     for i,el in enumerate(nodes):
         if el != "Node":
             byz_idxs.append(idxs[i])
+    print(f"byz indices: {byz_idxs}")
 
     fanout = data["params"]["fanout"]
     n_inner_nodes = (n_nodes - 1 + fanout - 1) // fanout
@@ -184,6 +185,7 @@ def fig_epoch_scores(d: dict, raw: dict, filename: str) -> go.Figure:
         sum(1 for c in cfgs if c["suspected"])/epoch_size
         for cfgs in d["config_data"]
     ]
+    frac_suspected = sum(n_suspected)/len(eks) # fraction of configs suspected across all epochs
     fig.add_trace(go.Bar(
         x=eks, y=n_suspected,
         marker_color="#3b3b3b",
@@ -193,11 +195,28 @@ def fig_epoch_scores(d: dict, raw: dict, filename: str) -> go.Figure:
         sum(1 for c in cfgs if c["byzantine_leader"])/epoch_size
         for cfgs in d["config_data"]
     ]
+    frac_byz_leaders = sum(n_byz_leaders)/len(eks) # fraction of leaders which are byzantine across all epochs
     fig.add_trace(go.Bar(
         x=eks, y=n_byz_leaders,
         marker_color="#3e3f00",
         name="Byzantine leaders (%)",
     ))
+    fig.add_annotation(
+    xref="paper", yref="paper",
+    x=0.98, y=0.98,  # top-right corner; adjust as needed
+    xanchor="right", yanchor="bottom",
+    text=(
+        f"<b>Totals</b><br>"
+        f"Suspected configs: {frac_suspected:.3f}<br>"
+        f"Byzantine leaders: {frac_byz_leaders:.3f}"
+    ),
+    showarrow=False,
+    align="left",
+    bgcolor="#1a1a2e",
+    bordercolor="#444",
+    borderwidth=1,
+    font=dict(size=12, color="white"),
+)
 
     j = 0
     for i, sk in enumerate(d["score_keys"]):
