@@ -69,7 +69,7 @@ print_attenuation_template = """ω -> observed frequency of node p as leader
 ------------------
 """
 
-def model1(m,N,f,fr,b_v,v_e,P_biz):
+def model1(m,N,f,fa,b_v,v_e,P_biz):
     h = int(np.log(N)/np.log(m)) # height of tree
     n_h = N - (m**h-1)/(m-1) # nodes at max height
     h_mean = sum([l*m**l if l != h else l*n_h for l in range(h+1)])/N # mean height of tree
@@ -80,11 +80,11 @@ def model1(m,N,f,fr,b_v,v_e,P_biz):
     P_biz_action = P_Internal if P_biz<0 else P_biz # probability of bizantine action
 
     # beta = P(algum vizinho falhar) + P(eu agir de forma bizantina)
-    beta_a = ((1-1/N) + m*P_Internal) * (fr-1)/(N-1) * P_biz_action + P_biz_action
-    beta_c = ((1-1/N) + m*P_Internal) * fr/(N-1) * P_biz_action + 0
+    beta_a = ((1-1/N) + m*P_Internal) * (fa-1)/(N-1) * P_biz_action + P_biz_action
+    beta_c = ((1-1/N) + m*P_Internal) * fa/(N-1) * P_biz_action + 0
 
-    gama_a = max(h_mean-1,0) * (fr-1)/(N-1) * P_biz_action
-    gama_c = max(h_mean-1,0) * fr/(N-1) * P_biz_action
+    gama_a = max(h_mean-1,0) * (fa-1)/(N-1) * P_biz_action
+    gama_c = max(h_mean-1,0) * fa/(N-1) * P_biz_action
 
     alfa_a = 1 - beta_a - gama_a
     alfa_c = 1 - beta_c - gama_c
@@ -106,7 +106,7 @@ def model1(m,N,f,fr,b_v,v_e,P_biz):
         print(print_params_template.format(k_c=k_c,k_p_c=k_p_c,k_p_a=k_p_a,k_I=k_I,interval=interval,k_p_mean=(k_p_a+k_p_c)/2))
 
 
-def model2(m, N, f, fr, b_v, v_e):
+def model2(m, N, f, fa, b_v, v_e):
     h = int(np.log(N)/np.log(m)) # height of tree
     n_h = N - (m**h-1)/(m-1) # nodes at max height
     h_mean = sum([l*m**l if l != h else l*n_h for l in range(h+1)])/N # mean height of tree
@@ -116,22 +116,22 @@ def model2(m, N, f, fr, b_v, v_e):
     P_Internal = int((N-1+m-1)/m)/N # probability of being an internal node
 
     # beta = [Prob(falhar) || Prob(vizinho falhar)] && P(todo ascendente ignorando o pai não falhar)
-    beta_a_ = (P_Internal + (P_Internal*m + 1-1/N)*(fr-1)/(N-1) - P_Internal * (P_Internal*m + 1-1/N)*(fr-1)/(N-1)) * (1 - max(0, h_mean-1) * (fr-1)/(N-1))
+    beta_a_ = (P_Internal + (P_Internal*m + 1-1/N)*(fa-1)/(N-1) - P_Internal * (P_Internal*m + 1-1/N)*(fa-1)/(N-1)) * (1 - max(0, h_mean-1) * (fa-1)/(N-1))
 
-    beta_c_ = (P_Internal*m + 1-1/N) * fr/(N-1) * (1 - max(0, h_mean-1) * fr/(N-1))
+    beta_c_ = (P_Internal*m + 1-1/N) * fa/(N-1) * (1 - max(0, h_mean-1) * fa/(N-1))
 
     # gama = P(algum ascendente ignorando o pai falhar)
-    gama_a_ = max(0, h_mean-1) * (fr-1)/(N-1)
+    gama_a_ = max(0, h_mean-1) * (fa-1)/(N-1)
 
-    gama_c_ = max(0, h_mean-1) * fr/(N-1)
+    gama_c_ = max(0, h_mean-1) * fa/(N-1)
 
     # alfa = 1- beta - gama
     alfa_a_ = 1 - beta_a_ - gama_a_
 
     alfa_c_ = 1 - beta_c_ - gama_c_
 
-    beta_i_ = beta_a_ * fr/N + beta_c_* (N-fr)/N
-    gama_i_ = gama_a_ * fr/N + gama_c_* (N-fr)/N
+    beta_i_ = beta_a_ * fa/N + beta_c_* (N-fa)/N
+    gama_i_ = gama_a_ * fa/N + gama_c_* (N-fa)/N
     delta = (gama_i_ + beta_i_ - gama_i_*beta_i_)**(f+1)
 
     alfa_a = (1-delta)*alfa_a_
@@ -154,7 +154,7 @@ def model2(m, N, f, fr, b_v, v_e):
     INILL = I - (m**(h-1)-1)/(m-1) # Internal Nodes In Lowest Level
     
     for k_c in k_c_references:
-        k_I = (k_c**(-b_v*v_e)) # internal node base penalty, agora calibrado para a raiz
+        k_I = (k_c**(-b_v*v_e*INILL)) # internal node base penalty - calibrado para a os internors mais inferiores
         sum_delta = 0
         for i, d in enumerate(delta_i):
             I_l = m**i if i < h-1 else INILL # Internal nodes in level l
@@ -172,27 +172,28 @@ def attenuation(N,v_e):
     b = 1/(1-5/(4*N))
     print(print_attenuation_template.format(a_inv=a_inv, b=b))
 
-def model(mdl, m, N, f, fr, b_v, v_e, P_biz):
+def model(mdl, m, N, f, fa, b_v, v_e, P_biz):
     if mdl == 1:
-        model1(m, N, f, fr, b_v, v_e, P_biz)
+        model1(m, N, f, fa, b_v, v_e, P_biz)
     elif mdl == 2:
-        model2(m, N, f, fr, b_v, v_e)
+        model2(m, N, f, fa, b_v, v_e)
     else:
         print(f"Model {mdl} not found")
 
 if __name__ == "__main__":
     if len(sys.argv) != 8:
-        print("""Usage: python calc_parameters <model> <fanout> <num_nodes> <fr> <blocks_per_view> <views_per_epoch> <P_biz>
-              <fr> - f_r as defined in the Kauri paper, fr <= 0 to adopt maximum tolerated failures
+        print("""Usage: python calc_parameters <model> <fanout> <num_nodes> <fa> <blocks_per_view> <views_per_epoch> <P_biz>
+              <model> - model 1 or 2 - 2 is the most up-to-date
+              <fa> - number of actual faults, fa <= 0 to adopt maximum tolerated failures
               <P_biz> - Probability of bizantine action, P_biz < 0 => P_biz = Prob. of being an internal node""")
         sys.exit(1)
     mdl = int(sys.argv[1]) # model number
     m = int(sys.argv[2]) # fanout
     N = int(sys.argv[3]) # number of nodes
     f = (N-1)//3 # tolerated faults
-    fr = int(sys.argv[4]) if int(sys.argv[4]) > 0 else f
+    fa = int(sys.argv[4]) if int(sys.argv[4]) > 0 else f
     b_v = int(sys.argv[5])
     v_e = int(sys.argv[6])
     P_biz = float(sys.argv[7])
-    model(mdl, m, N, f, fr, b_v, v_e, P_biz)
+    model(mdl, m, N, f, fa, b_v, v_e, P_biz)
     attenuation(N, v_e)
