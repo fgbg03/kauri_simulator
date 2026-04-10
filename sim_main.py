@@ -1,4 +1,4 @@
-from node import Node, LeadershipSeizerNode, DisenfranchiserNode, IndirectDisenfranchiserNode
+from node import Node, LeadershipSeizerNode, DisenfranchiserNode, IndirectDisenfranchiserNode, QuietParticipationNode, RandomNode
 from tree import Tree
 from consensus import Kauri
 from reputation import Reputation
@@ -45,7 +45,7 @@ def simulation(
         scale_function = lambda x: 1/(x+1),
         memory_size = 12, # number of trees
 
-        print_to_stdout = True,
+        print_to_stdout = False,
         write_to_file = True
 ):
     kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
@@ -75,7 +75,8 @@ def simulation(
         "bootstrap1": bootstrap1,
         "bootstrap2": bootstrap2,
         "ideal_latency": ideal_latency,
-        "latency":latency_matrix
+        "latency":latency_matrix,
+        "memory_size":f"{memory_size} trees"
     }
 
     epoch = 0
@@ -160,6 +161,7 @@ def simulation(
         hh = now.hour
         mm = now.minute
         ss = now.second
+        print(f"Writing to file: simresults/simresults{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}")
         with open(f"simresults/simresults{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}", "w") as fp:
             json.dump(epoch_data, fp, default=lambda x:repr(x), indent=2)
     
@@ -358,19 +360,33 @@ def select_latency(i,j, too_slow: list[int] = [], bad_pairs: list[tuple[int,int]
     return 100
 
 if __name__ == "__main__":
-    N = 6 # N nodes
+    print("Started")
+    N = 100 # N nodes
     f = (N-1)//3
     quorum_size = 2*f+1
-    m = 3 # m fanout
+    m = 10 # m fanout
+    b_v = 20 # blocks per view
+    v_e = 25 # views per epoch
     nodes = [Node(i) for i in range(N)]
-    nodes[0] = LeadershipSeizerNode(0)
+    targets = [i*3+1 for i in range(17)] # for disenfranchiser nodes
+    for i in range(17):
+        idx = i*3
+        nodes[idx] = RandomNode(idx, 0.1)
 
     latency_matrix = [[select_latency(i,j, too_slow=[]) for j in range(N)] for i in range(N)]
 
     t1 = Tree(nodes, m)
     inner = t1.size_inner_nodes()
     t2 = Tree(nodes[inner:2*inner]+nodes[:inner]+nodes[2*inner:], m)
-    simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, compensation=1.04, scale_function=lambda x: 1 - 0.06*x)
+
+
+    simulation(
+        t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, 
+        decisions_per_tree=b_v, epoch_size=v_e, memory_size=25, 
+        compensation=1.01, faulty_link_penalty=0.9828, suspected_leader_penalty=3.579e-20,
+        scale_function=lambda x: 1/(1-(5/(4*N))) + x/(v_e*5/4/N-v_e)
+    )
+    print("Finished")
 
 """
 if __name__ == "__main__":
