@@ -1,5 +1,6 @@
 from tree import Tree
 from node import Node
+import numpy as np
 
 class TreeGenerator:
     def __init__(self, bins_to_use = 1):
@@ -33,3 +34,78 @@ class TreeGenerator:
             tree_pool += t.innerNodeRotations()
 
         return tree_pool
+    
+class NullTreeGenerator(TreeGenerator):
+    def __init__(self):
+        super().__init__()
+    
+    def generate(self, base_tree):
+        return []
+    
+class RandomTreeGenerator(TreeGenerator):
+    def __init__(self, n_trees):
+        super().__init__()
+        self.n_trees = n_trees
+
+    def generate(self, base_tree):
+        fanout = base_tree.fanout
+        node_tuple = base_tree.nodes
+        tree_pool = []
+        for _ in range(self.n_trees):
+            rand_nodes = list(node_tuple)
+            np.random.shuffle(rand_nodes)
+            new_tree = Tree(rand_nodes, fanout)
+            tree_pool.append(new_tree)
+        return tree_pool
+    
+class BinTreeGenerator(TreeGenerator):
+    def __init__(self, n_trees, bins_to_use=1):
+        super().__init__(bins_to_use)
+        self.n_trees = n_trees
+    
+    """
+    base_tree should be the last tree used before generating more bin-based trees
+        in order to follow kauri's logic
+    """
+    def generate(self, base_tree):
+        def log(base, v):
+            return np.log(v) / np.log(base)
+        tree_pool = []
+        last_tree = base_tree
+
+        m = base_tree.fanout
+        n = len(base_tree.nodes)
+        depth = np.ceil(log(m, n * (m-1) + 1))-1
+        shift = (m**depth - 1) / (m - 1) # shift between two consecutive trees
+        shift = int(shift)
+
+        for _ in range(self.n_trees):
+            next_nodes = np.roll(list(last_tree.nodes), shift)
+            new_tree = Tree(next_nodes, m)
+            tree_pool.append(new_tree)
+            last_tree = new_tree
+        return tree_pool
+    
+if __name__ == "__main__":
+    print("testing tree generators")
+    nodes = [Node(6), Node(3), Node(0), Node(4), Node(2), Node(5), Node(1)]
+    base_tree = Tree(nodes,2)
+
+    print("testing random tree generator")
+    rtg = RandomTreeGenerator(10)
+    gen1 = rtg.generate(base_tree)
+    gen2 = rtg.generate(base_tree)
+
+    print(f"gen1 == gen2 => {np.array_equal(gen1,gen2)}")
+    print(f"gen1:\n{gen1}")
+    print(f"\ngen2:\n{gen2}")
+
+    print("\n\n\ntesting bin tree generator")
+    btg = BinTreeGenerator(7)
+    gen = btg.generate(base_tree)
+
+    print(gen)
+    for i, t in enumerate(gen):
+        print(f"Tree {i+1}")
+        t.draw()
+        print()
