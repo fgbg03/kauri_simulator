@@ -86,6 +86,44 @@ class BinTreeGenerator(TreeGenerator):
             last_tree = new_tree
         return tree_pool
     
+class RandomBinGenerator(TreeGenerator):
+    def __init__(self, n_trees):
+        super().__init__()
+        self.n_trees = n_trees
+
+    def generate(self, base_tree):
+        fanout = base_tree.fanout
+        
+        num_inner_nodes = base_tree.size_inner_nodes()
+
+        nodes = sorted(list(base_tree.nodes), key= lambda x: (x.get_reputation(), x.id), reverse=True) # TODO desempate com id talvez não seja ideal
+
+        bins = [nodes[i:i+num_inner_nodes] for i in range(0, len(nodes), num_inner_nodes)]
+        
+        if len(bins[-1]) != num_inner_nodes: # ensure last bin fills inner nodes
+            tmp1 = bins.pop()
+            tmp2 = bins.pop()
+            bins.append(tmp2+tmp1)
+
+        tree_pool = []
+
+        for _ in range(self.n_trees):
+            r = np.random.randint(0, len(bins))
+
+            inner_bin = [] + bins[r]
+            np.random.shuffle(inner_bin)
+
+            leaf_bins = []
+            for i, b in enumerate(bins):
+                if r == i:
+                    continue
+                leaf_bins += b
+            np.random.shuffle(leaf_bins)
+
+            new_tree = Tree(inner_bin+leaf_bins, fanout)
+            tree_pool.append(new_tree)
+        return tree_pool
+    
 if __name__ == "__main__":
     print("testing tree generators")
     nodes = [Node(6), Node(3), Node(0), Node(4), Node(2), Node(5), Node(1)]
@@ -106,6 +144,20 @@ if __name__ == "__main__":
 
     print(gen)
     for i, t in enumerate(gen):
+        print(f"Tree {i+1}")
+        t.draw()
+        print()
+
+    print("testing random bins")
+    rbg = RandomBinGenerator(10)
+    gen1 = rbg.generate(base_tree)
+    gen2 = rbg.generate(base_tree)
+
+    print(f"gen1 == gen2 => {np.array_equal(gen1,gen2)}")
+    print(f"gen1:\n{gen1}")
+    print(f"\ngen2:\n{gen2}")
+
+    for i, t in enumerate(gen1):
         print(f"Tree {i+1}")
         t.draw()
         print()

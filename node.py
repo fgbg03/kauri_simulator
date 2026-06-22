@@ -3,12 +3,16 @@ import random as rd
 class Node:
     def __init__(self, id):
         self.id = id
-        self._reputation = 0.66
+        self._reputation = 1.0
 
     def set_reputation(self, value):
-        value = min(value, 1)
-        value = max(value, 0)
         self._reputation = value
+
+    def bound_reputation(self):
+        if self._reputation > 1:
+            self._reputation = 1
+        elif self._reputation < 0:
+            self._reputation = 0
 
     def get_reputation(self):
         return self._reputation
@@ -98,6 +102,20 @@ class QuietParticipationNode(Node):
 
     def is_byzantine(self, target, tree):
         return True
+    
+class PeriodicSilentNode(Node):
+    def __init__(self, id, period = 4):
+        super().__init__(id)
+        self.period = period
+        self.count = 0
+        self.last_tree = None
+
+    def is_byzantine(self, target, tree):
+        if tree != self.last_tree:
+            self.last_tree = tree
+            self.count = (self.count+1)%self.period
+
+        return self.count == 0
 
 class RandomNode(Node):
     def __init__(self, id, failure_prob=0.5):

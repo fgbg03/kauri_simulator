@@ -1,10 +1,10 @@
-from node import Node, LeadershipSeizerNode, DisenfranchiserNode, IndirectDisenfranchiserNode, QuietParticipationNode, RandomNode
+from node import Node, LeadershipSeizerNode, DisenfranchiserNode, IndirectDisenfranchiserNode, QuietParticipationNode, RandomNode, PeriodicSilentNode
 from tree import Tree
 from consensus import Kauri
-from reputation import Reputation
-from tree_generator import TreeGenerator
-from tree_evaluator import TreeEvaluator
-from epoch_generator import EpochGenerator
+from reputation import Reputation, ReputationOld, ReputationCosntantInnerPenalty
+from tree_generator import TreeGenerator, RandomTreeGenerator, BinTreeGenerator, RandomBinGenerator
+from tree_evaluator import TreeEvaluator, TreeEvaluatorInforum
+from epoch_generator import EpochGenerator, NullEpochGenerator
 from epoch_evaluator import EpochEvaluator
 
 import json
@@ -45,20 +45,80 @@ def simulation(
         scale_function = lambda x: 1/(x+1),
         memory_size = 12, # number of trees
 
+        scheduler= "adaptive",
+        reputation= "scaling", # which reputation engine to use
+
         print_to_stdout = False,
-        write_to_file = True
+        write_to_file = True,
+        consequence_logs = False
 ):
-    kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
-    reputation_module = Reputation(faulty_link_penalty, suspected_leader_penalty, compensation)
-    tree_generator = TreeGenerator(bins_to_use)
+    reputation_module = None
     tree_evaluator = TreeEvaluator(bootstrap1[0], ideal_latency)
-    epoch_generator = EpochGenerator(scale_function, epoch_size)
     epoch_evaluator = EpochEvaluator()
+    tree_generator = None
+    epoch_generator = None
+    kauri = None
 
-    schedules = []
+    schedules: list[list[Tree]] = []
 
-    schedules.append(bootstrap1)
-    schedules.append(bootstrap2)
+    if reputation == "scaling":
+        reputation_module = Reputation(faulty_link_penalty, suspected_leader_penalty, compensation)
+    elif reputation == "constant":
+        reputation_module = ReputationCosntantInnerPenalty(faulty_link_penalty, suspected_leader_penalty, compensation)
+    elif reputation == "old":
+        reputation_module = ReputationOld(faulty_link_penalty, suspected_leader_penalty, compensation)
+    else:
+        print(f"invalid reputation engine '{reputation}'\nuse 'scaling' (default), 'constant', or 'old'")
+        exit(0)
+
+    if scheduler == "adaptive":
+        tree_generator = TreeGenerator(bins_to_use)
+        epoch_generator = EpochGenerator(scale_function, epoch_size)
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
+        schedules.append(bootstrap1)
+        schedules.append(bootstrap2)
+    elif scheduler == "adaptive-inforum":
+        tree_generator = TreeGenerator(bins_to_use)
+        epoch_generator = EpochGenerator(lambda x: 1, epoch_size)
+        tree_evaluator = TreeEvaluatorInforum(bootstrap1[0])
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
+        schedules.append(bootstrap1)
+        schedules.append(bootstrap2)
+    elif scheduler == "random-full":
+        tree_generator = RandomTreeGenerator(epoch_size*decisions_per_tree)
+        epoch_generator = NullEpochGenerator()
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), 1) # one random tree per every decision
+        s1 = tree_generator.generate(bootstrap1[0])
+        s2 = tree_generator.generate(bootstrap1[0])
+        schedules.append(s1)
+        schedules.append(s2)
+    elif scheduler == "random-lite":
+        tree_generator = RandomTreeGenerator(epoch_size)
+        epoch_generator = NullEpochGenerator()
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree) # one tree does all decisions it should
+        s1 = tree_generator.generate(bootstrap1[0])
+        s2 = tree_generator.generate(bootstrap1[0])
+        schedules.append(s1)
+        schedules.append(s2)
+    elif scheduler == "random-bins":
+        tree_generator = RandomBinGenerator(epoch_size)
+        epoch_generator = NullEpochGenerator()
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
+        s1 = tree_generator.generate(bootstrap1[0])
+        s2 = tree_generator.generate(bootstrap1[0])
+        schedules.append(s1)
+        schedules.append(s2)
+    elif scheduler == "bins":
+        tree_generator = BinTreeGenerator(epoch_size)
+        epoch_generator = NullEpochGenerator()
+        kauri = Kauri(expected_rtt, int(expected_rtt*1.5), decisions_per_tree)
+        s1 = tree_generator.generate(bootstrap1[0])
+        schedules.append(s1)
+        s2 = tree_generator.generate(s1[-1])
+        schedules.append(s2)
+    else:
+        print(f"invalid scheduler '{scheduler}'\nuse 'adaptive', 'bins', 'random-full, 'random-lite', or 'random-bins'")
+        exit(0)
 
     params = {
         "exit_cond": inspect.getsource(exit_condition),
@@ -72,11 +132,13 @@ def simulation(
         "bins_to_use": bins_to_use,
         "epoch_size": epoch_size,
         "scale_function": inspect.getsource(scale_function),
+        "memory_size":f"{memory_size} trees",
+        "scheduler": scheduler,
+        "reputation": reputation,
         "bootstrap1": bootstrap1,
         "bootstrap2": bootstrap2,
         "ideal_latency": ideal_latency,
         "latency":latency_matrix,
-        "memory_size":f"{memory_size} trees"
     }
 
     epoch = 0
@@ -89,10 +151,12 @@ def simulation(
         s = schedules[-2]
 
         execution_data = kauri.execute_schedule(s, latency_matrix)
-
-        reputation_module.parse_schedule(execution_data)
         
-        tree_pool = tree_generator.generate(s[0])
+        base_tree = schedules[-1][-1] # irrelevant for all schedulers but "bins" in this one we need the last tree specificly
+
+        reputation_module.parse_schedule(execution_data, base_tree.nodes)
+        
+        tree_pool = tree_generator.generate(base_tree)
 
         scores = []
         for tree in tree_pool:
@@ -153,18 +217,27 @@ def simulation(
     if print_to_stdout:
         print(epoch_data)
 
+    now = datetime.now()
+    AAAA = now.year
+    MM = now.month
+    DD = now.day
+    hh = now.hour
+    mm = now.minute
+    ss = now.second
+
     if write_to_file:
-        now = datetime.now()
-        AAAA = now.year
-        MM = now.month
-        DD = now.day
-        hh = now.hour
-        mm = now.minute
-        ss = now.second
-        print(f"Writing to file: simresults/simresults{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}")
-        with open(f"simresults/simresults{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}", "w") as fp:
+        filepath = f"simresults/simresults{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}"
+        print("Writing to:", filepath)
+        with open(filepath, "w") as fp:
             json.dump(epoch_data, fp, default=lambda x:repr(x), indent=2)
-    
+        
+    if consequence_logs:
+        filepath = f"simresults/simconsequences{AAAA:04d}{MM:02d}{DD:02d}{hh:02d}{mm:02d}{ss:02d}"
+        print("Writing to:", filepath)
+        with open(filepath, "w") as fp:
+            json.dump(reputation_module.consequence_logs, fp, default=lambda x:repr(x), indent=2)
+
+
     return epoch_data
 
 def print_schedule_scores(s):
@@ -361,17 +434,17 @@ def select_latency(i,j, too_slow: list[int] = [], bad_pairs: list[tuple[int,int]
 
 if __name__ == "__main__":
     print("Started")
-    N = 100 # N nodes
+    N = 111 # N nodes
     f = (N-1)//3
     quorum_size = 2*f+1
     m = 10 # m fanout
     b_v = 20 # blocks per view
     v_e = 25 # views per epoch
     nodes = [Node(i) for i in range(N)]
-    targets = [i*3+1 for i in range(17)] # for disenfranchiser nodes
-    for i in range(17):
+    #targets = [i*3+1 for i in range(17)] # for disenfranchiser nodes
+    for i in range(9):
         idx = i*3
-        nodes[idx] = RandomNode(idx, 0.1)
+        nodes[idx] = PeriodicSilentNode(idx)
 
     latency_matrix = [[select_latency(i,j, too_slow=[]) for j in range(N)] for i in range(N)]
 
@@ -379,72 +452,12 @@ if __name__ == "__main__":
     inner = t1.size_inner_nodes()
     t2 = Tree(nodes[inner:2*inner]+nodes[:inner]+nodes[2*inner:], m)
 
-
     simulation(
         t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, 
         decisions_per_tree=b_v, epoch_size=v_e, memory_size=25, 
-        compensation=1.01, faulty_link_penalty=0.9828, suspected_leader_penalty=3.579e-20,
-        scale_function=lambda x: 1/(1-(5/(4*N))) + x/(v_e*5/4/N-v_e)
+        compensation=1.01, faulty_link_penalty=0.6400, suspected_leader_penalty=0.5035,
+        scale_function=lambda x: 1/(1-(5/(4*N))) + x/(v_e*5/4/N-v_e),
+        scheduler="random-bins", consequence_logs=True, reputation="constant"
     )
+
     print("Finished")
-
-"""
-if __name__ == "__main__":
-    N = 12 # N nodes
-    f = (N-1)//3
-    quorum_size = 2*f+1
-    m = 3 # m fanout
-    nodes = [Node(i) for i in range(N)]
-
-    latency_matrix = [[select_latency(i,j, too_slow = [1,2,3]) for j in range(N)] for i in range(N)]
-
-    t1 = Tree(nodes, m)
-    inner = t1.size_inner_nodes()
-    t2 = Tree(nodes[inner:2*inner]+nodes[:inner]+nodes[2*inner:], m)
-    #simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), faulty_link_penalty=0.73)
-
-    threshold = 0.66
-    above_threshold = 0
-    k_p = 0.6
-    k_c = 1.03
-    res = None
-    list_k_c = []
-    list_k_p = []
-    list_reputations = []
-    while k_c < 1.20:
-        k_p = 0.6
-        above_threshold = 0
-        while above_threshold < N-f-1:
-            above_threshold = 0
-            nodes = [Node(i) for i in range(N)]
-            t1 = Tree(nodes, m)
-            t2 = Tree(nodes[2:4]+nodes[:2]+nodes[4:], m)
-            res = simulation(t1.innerNodeRotations(), t2.innerNodeRotations(), N, m, nodes, latency_matrix, 
-                             write_to_file=False, print_to_stdout=False, faulty_link_penalty=k_p, compensation=k_c)
-            for rep in res[99]["reputations"]:
-                if rep >= threshold:
-                    above_threshold += 1
-            k_p+=0.005
-        
-        list_k_c.append(str(k_c)[:5])
-        list_k_p.append(k_p)
-        list_reputations.append(res[99]["reputations"])
-
-        k_c += 0.005
-    
-    categorical_points(list_k_p, list_k_c, "Companesation rate", "Penalty rate (faulty link)", f"N({N})-f({f})-1 nodes with reputation above {threshold} after 100 epochs")
-    boxplot_from_lists(list_reputations, list_k_c, f"Reputations after 100 epochs for N({N}) nodes", "Compensation rate", "Reputations", threshold)
-    
-    txt = f"Compensation and penalisation rates for {N} nodes and {threshold} threshold\n"
-    for i in range(len(list_k_c)):
-        c = float(list_k_c[i])
-        p = list_k_p[i]
-        new_line = f"k_c = {c}, k_p = {p}, k_c^(f-N) = {c**-5}, k_p^f = {p**f}, ratio k_p^f/k_c^(f-N) = {p**f/(c**(f-N))}"
-        print(new_line)
-        txt = f"{txt}{new_line}\n"
-
-    with open(f"simresults/log_penalty_compensation_threshold{int(threshold*100):03d}_{N}nodes.txt", "w") as text_file:
-        text_file.write(txt)
-    #print(res[99]["reputations"])
-    #print("k =",k_p)
-"""

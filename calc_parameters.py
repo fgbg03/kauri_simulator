@@ -105,7 +105,7 @@ def model1(m,N,f,fa,b_v,v_e,P_biz):
         interval = "Ø" if k_p_c >= k_p_a else f"[{k_p_c}, {k_p_a}]"
         print(print_params_template.format(k_c=k_c,k_p_c=k_p_c,k_p_a=k_p_a,k_I=k_I,interval=interval,k_p_mean=(k_p_a+k_p_c)/2))
 
-
+# ATENÇÃO ESTOU A ESCREVER O ARTIGO COM beta E gama TROCADOS (trocados porque decidi que era mais normal ordenar por coeficientes)
 def model2(m, N, f, fa, b_v, v_e):
     h = int(np.log(N)/np.log(m)) # height of tree
     n_h = N - (m**h-1)/(m-1) # nodes at max height
@@ -154,6 +154,7 @@ def model2(m, N, f, fa, b_v, v_e):
     INILL = I - (m**(h-1)-1)/(m-1) # Internal Nodes In Lowest Level
     
     for k_c in k_c_references:
+        print(f"-> K_I = {k_c} ^ (- {b_v} * {v_e} * {INILL})")
         k_I = (k_c**(-b_v*v_e*INILL)) # internal node base penalty - calibrado para a os internors mais inferiores
         sum_delta = 0
         for i, d in enumerate(delta_i):
@@ -181,11 +182,12 @@ def model(mdl, m, N, f, fa, b_v, v_e, P_biz):
         print(f"Model {mdl} not found")
 
 if __name__ == "__main__":
+    print("Not fit for use -- very likely wrong")
     if len(sys.argv) != 8:
         print("""Usage: python calc_parameters <model> <fanout> <num_nodes> <fa> <blocks_per_view> <views_per_epoch> <P_biz>
               <model> - model 1 or 2 - 2 is the most up-to-date
               <fa> - number of actual faults, fa <= 0 to adopt maximum tolerated failures
-              <P_biz> - Probability of bizantine action, P_biz < 0 => P_biz = Prob. of being an internal node""")
+              <P_biz> - Probability of bizantine action, P_biz < 0 => P_biz = Prob. of being an internal node (only used in model 1)""")
         sys.exit(1)
     mdl = int(sys.argv[1]) # model number
     m = int(sys.argv[2]) # fanout

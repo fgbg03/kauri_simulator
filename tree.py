@@ -84,7 +84,7 @@ class Tree:
             level+=1
         return level+1
     
-    def get_inner_nodes(self):
+    def get_inner_nodes(self) -> tuple[Node]:
         return self.nodes[:self.size_inner_nodes()]
     
     def get_inner_nodes_by_level(self):

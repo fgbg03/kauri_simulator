@@ -41,3 +41,11 @@ class EpochGenerator:
             scores.append(s)
         
         return schedule, scores
+    
+class NullEpochGenerator(EpochGenerator):
+    def __init__(self):
+        super().__init__(0,0)
+    
+    def generate_epoch(self, tree_pool, tree_scores, memory):
+        return tree_pool, tree_scores
+    

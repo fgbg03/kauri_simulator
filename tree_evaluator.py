@@ -98,3 +98,22 @@ class TreeEvaluator:
         scores["unified"] = self.score_unify(scores["behaviour"], scores["network"])
 
         return scores
+    
+class TreeEvaluatorInforum(TreeEvaluator):
+    def __init__(self, tree):
+        super().__init__(tree, 1)
+
+    def score_behaviour(self, tree):
+        total = 0
+
+        for node in tree.get_inner_nodes():
+            total += node.get_reputation()
+        
+        return total
+    
+    def score(self, tree: Tree, latency_matrix):
+        scores = {}
+
+        scores["unified"] = self.score_behaviour(tree)
+
+        return scores
